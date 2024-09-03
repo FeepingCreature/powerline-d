@@ -224,7 +224,7 @@ Contributions to Powerline-D are welcome! Please submit pull requests with new f
 
 ## Troubleshooting
 
-If you encounter any issues, please check the [FAQ](https://github.com/your-username/powerline-d/wiki/FAQ) or open an [issue](https://github.com/your-username/powerline-d/issues/new).
+If you encounter problems, please open an [issue](https://github.com/FeepingCreature/powerline-d/issues/new).
 
 ## Credits
 
