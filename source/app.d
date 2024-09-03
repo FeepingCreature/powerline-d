@@ -134,7 +134,7 @@ SegmentInfo[] createSegments(string segmentType, Powerline powerline, JSONValue 
         case "ssh":
             return sshSegment(theme);
         case "cwd":
-            return cwdSegments(theme, cwd, powerline.separatorThin, segmentConfig);
+            return cwdSegments(theme, cwd, powerline.separator, powerline.separatorThin, segmentConfig);
         case "readonly":
             return readonlySegment(theme, cwd);
         case "git":

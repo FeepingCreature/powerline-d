@@ -10,9 +10,9 @@ import base;
 import config;
 import themes;
 
-SegmentInfo[] cwdSegments(ThemeColors theme, string cwd, string separatorThin, JSONValue config)
+SegmentInfo[] cwdSegments(ThemeColors theme, string cwd, string separator, string separatorThin, JSONValue config)
 {
-    const string ELLIPSIS = "...";
+    const string ELLIPSIS = "\u2026";
 
     string replacedCwd = replaceHomeDir(cwd);
     string[] names = splitPathIntoNames(replacedCwd);
@@ -21,7 +21,11 @@ SegmentInfo[] cwdSegments(ThemeColors theme, string cwd, string separatorThin, J
     int maxDepth = config.getConfigValue("max_depth", 5);
     string mode = config.getConfigValue("mode", "fancy");
 
-    if (maxDepth > 0 && names.length > maxDepth)
+    if (maxDepth <= 0)
+    {
+        // Warning: Ignoring cwd.max_depth option since it's not greater than 0
+    }
+    else if (names.length > maxDepth)
     {
         int nBefore = (maxDepth > 2) ? 2 : maxDepth - 1;
         names = names[0 .. nBefore] ~ [ELLIPSIS] ~ names[$ - (maxDepth - nBefore) .. $];
@@ -40,20 +44,67 @@ SegmentInfo[] cwdSegments(ThemeColors theme, string cwd, string separatorThin, J
         return segments;
     }
 
+    bool isFirstRealDir = true;
     foreach (i, name; names)
     {
         bool isLastDir = (i == names.length - 1);
         auto colors = getFgBg(theme, name, isLastDir);
 
-        string separator = isLastDir ? null : separatorThin;
-        int separatorFg = isLastDir ? theme.pathBg : theme.separatorFg;
+        string dirSeparator;
+        int separatorFg;
+
+        if (name == "~" && theme.homeSpecialDisplay)
+        {
+            dirSeparator = null;
+            separatorFg = theme.homeBg;
+        }
+        else if (isLastDir)
+        {
+            dirSeparator = null;
+            separatorFg = theme.pathBg;
+        }
+        else
+        {
+            dirSeparator = separatorThin;
+            separatorFg = theme.separatorFg;
+        }
 
         if (!isLastDir || !fullCwd)
         {
             name = maybeShortenName(name, config);
         }
 
-        segments ~= SegmentInfo(name, colors[0], colors[1], separator, separatorFg);
+        if (mode == "compact")
+        {
+            segments ~= SegmentInfo(name, colors[0], colors[1], dirSeparator, separatorFg);
+            continue;
+        }
+
+        if (name == "~" && theme.homeSpecialDisplay)
+        {
+            name = " " ~ name ~ " ";
+        }
+        else if (isFirstRealDir && isLastDir)
+        {
+            name = " " ~ name ~ " ";
+        }
+        else if (isFirstRealDir)
+        {
+            name = " " ~ name;
+            isFirstRealDir = false;
+        }
+        else if (isLastDir)
+        {
+            name = name ~ " ";
+        }
+
+        segments ~= SegmentInfo(name, colors[0], colors[1], dirSeparator, separatorFg);
+    }
+
+    // Add the thick separator after the last segment
+    if (!segments.empty)
+    {
+        segments[$ - 1].separator = separator;
     }
 
     return segments;
@@ -73,12 +124,13 @@ string replaceHomeDir(string cwd)
 
 string[] splitPathIntoNames(string cwd)
 {
-    return cwd.split("/").filter!(s => !s.empty).array;
+    auto parts = cwd.split("/").filter!(s => !s.empty).array;
+    return parts.empty ? ["/"] : parts;
 }
 
 int[2] getFgBg(ThemeColors theme, string name, bool isLastDir)
 {
-    if (name == "~")
+    if (name == "~" && theme.homeSpecialDisplay)
     {
         return [theme.homeFg, theme.homeBg];
     }
