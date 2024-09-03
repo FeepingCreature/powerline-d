@@ -616,7 +616,7 @@ SegmentInfo[] bzrSegments(ThemeColors theme, string cwd)
 
 SegmentInfo[] hgSegments(ThemeColors theme, string cwd)
 {
-    auto result = execute(["hg", "status"], null, Config.none, size_t.max, cwd);
+    auto result = execute(["hg", "status"], null, Config.none, size_t.max, cwd).handleMissingCommand;
     if (result.status != 0)
         return [];
 
@@ -669,4 +669,16 @@ SegmentInfo[] hgSegments(ThemeColors theme, string cwd)
     }
 
     return segments;
+}
+
+auto handleMissingCommand(T)(lazy T value)
+{
+    try
+    {
+        return value;
+    }
+    catch (ProcessException exception)
+    {
+        return typeof(return)(1, null);
+    }
 }
