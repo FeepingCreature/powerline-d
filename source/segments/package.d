@@ -254,7 +254,7 @@ SegmentInfo[] devSegment(ThemeColors theme)
 {
     if ("CONTAINER" in environment)
     {
-        return [SegmentInfo("dev", theme.virtualEnvFg, theme.virtualEnvBg)];
+        return [SegmentInfo("dev", 0, 3)];
     }
     return [];
 }
