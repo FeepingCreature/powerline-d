@@ -1,4 +1,4 @@
-module git2;
+module deimos.git2;
 
 public
 {
