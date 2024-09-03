@@ -7,6 +7,5 @@
 	"license": "MIT",
 	"name": "powerline-d",
     "dependencies": {
-        "colorize": "~>1.0.5"
     }
 }

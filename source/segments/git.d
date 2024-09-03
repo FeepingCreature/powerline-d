@@ -38,23 +38,35 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
     }
     segments ~= SegmentInfo(" " ~ status.branch ~ " ", fg, bg);
 
-    // Status segment
-    if (status.ahead > 0 || status.behind > 0 || status.staged > 0
-        || status.notStaged > 0 || status.untracked > 0 || status.conflicted > 0)
+    string check(int count, string code) {
+        if (count == 0) return "";
+        return count == 1 ? code : count.to!string ~ code;
+    }
+    // Status segments
+    if (status.ahead > 0)
     {
-        string statusContent = "";
-        void check(int count, string code) {
-            if (count == 0) return;
-            statusContent ~= count == 1 ? code : count.to!string ~ code;
-        }
-        check(status.ahead, "↑");
-        check(status.behind, "↓");
-        check(status.staged, "✔   ");
-        check(status.notStaged, "✎   ");
-        check(status.untracked, "?");
-        check(status.conflicted, "!");
-
-        segments ~= SegmentInfo(" " ~ statusContent.strip ~ " ", theme.repoDirtyFg, theme.repoDirtyBg);
+        const content = check(status.ahead, "⬆ ");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitAheadFg, theme.gitAheadBg);
+    }
+    if (status.behind > 0)
+    {
+        const content = check(status.behind, "⬇ ");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitBehindFg, theme.gitBehindBg);
+    }
+    if (status.staged > 0 || status.notStaged > 0)
+    {
+        const content = check(status.staged, "✔   ") ~ check(status.notStaged, "✎   ");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitStagedFg, theme.gitStagedBg);
+    }
+    if (status.untracked > 0)
+    {
+        const content = check(status.untracked, "?");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitUntrackedFg, theme.gitUntrackedBg);
+    }
+    if (status.conflicted > 0)
+    {
+        const content = check(status.conflicted, "!");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitConflictedFg, theme.gitConflictedBg);
     }
 
     return segments;
