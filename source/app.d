@@ -22,8 +22,8 @@ class Powerline
     private PowerlineConfig _config;
     private ThemeColors _theme;
     string cwd;
-    string colorTemplate = "\033[%sm";
-    string reset;
+    string colorTemplate = "\\[\\e%s\\]";
+    string reset = "\\[\\e[0m\\]";
     string lock;
     string network;
     string separator;
@@ -65,12 +65,12 @@ class Powerline
 
     private string fgcolor(int code)
     {
-        return code == -1 ? "\033[39m" : colorTemplate.format("38;5;" ~ code.to!string);
+        return code == -1 ? "\\[\\e[39m\\]" : colorTemplate.format("[38;5;" ~ code.to!string ~ "m");
     }
 
     private string bgcolor(int code)
     {
-        return code == -1 ? "\033[49m" : colorTemplate.format("48;5;" ~ code.to!string);
+        return code == -1 ? "\\[\\e[49m\\]" : colorTemplate.format("[48;5;" ~ code.to!string ~ "m");
     }
 
     string draw()
@@ -85,7 +85,7 @@ class Powerline
             else
             {
                 result ~= drawSegment(segments[i]);
-                result ~= fgcolor(segments[i].bg) ~ bgcolor(theme.reset) ~ separator;
+                result ~= fgcolor(segments[i].bg) ~ bgcolor(theme.reset) ~ separator ~ "\\[\\e[0m\\]";
             }
         }
         return result ~ reset ~ " ";
@@ -95,10 +95,10 @@ class Powerline
     {
         string result = fgcolor(segment.fg) ~ bgcolor(segment.bg);
         if (segment.bold)
-            result ~= "\033[1m";
+            result ~= "\\[\\e[1m\\]";
         result ~= segment.content;
         if (segment.bold)
-            result ~= "\033[22m";
+            result ~= "\\[\\e[22m\\]";
         if (nextSegment != SegmentInfo.init)
         {
             result ~= bgcolor(nextSegment.bg) ~ fgcolor(segment.separatorFg) ~ segment.separator;
