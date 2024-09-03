@@ -133,8 +133,7 @@ GitStatus getGitStatus(string cwd)
     if (!branchLine.empty)
     {
         auto branchInfo = branchLine.front[3 .. $].strip();
-        auto branchMatch = branchInfo.matchFirst(
-                r"^(\S+?)(\.{3}(\S+?)( \[(ahead (\d+)(, )?)?(behind (\d+))?\])?)?$");
+        auto branchMatch = branchInfo.matchFirst(branchRegex);
         if (!branchMatch.empty)
         {
             status.branch = branchMatch[1];
@@ -182,3 +181,5 @@ GitStatus getGitStatus(string cwd)
 
     return status;
 }
+
+enum branchRegex = ctRegex!(r"^(\S+?)(\.{3}(\S+?)( \[(ahead (\d+)(, )?)?(behind (\d+))?\])?)?$");
