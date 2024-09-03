@@ -6,6 +6,9 @@
 	"description": "A D port of powerline-shell by Claude 3.5 Sonnet.",
 	"license": "MIT",
 	"name": "powerline-d",
-    "dependencies": {
-    }
+	"libs": [
+		"git2"
+	],
+	"dependencies": {
+	}
 }

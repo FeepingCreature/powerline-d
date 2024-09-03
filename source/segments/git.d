@@ -1,7 +1,6 @@
 module segments.git;
 
 import std.json;
-import std.process;
 import std.array;
 import std.algorithm;
 import std.string;
@@ -10,6 +9,7 @@ import std.regex;
 import base;
 import config;
 import themes;
+import deimos.git2;
 
 SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
 {
@@ -84,11 +84,18 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
 
 SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
 {
-    auto result = execute(["git", "stash", "list"], null, Config.none, size_t.max, cwd);
-    if (result.status != 0)
+    git_libgit2_init();
+    scope(exit) git_libgit2_shutdown();
+
+    git_repository* repo;
+    if (git_repository_open(&repo, cwd.toStringz) != 0)
+        return [];
+    scope(exit) git_repository_free(repo);
+
+    size_t stashCount;
+    if (git_stash_foreach(repo, &increment, &stashCount) != 0)
         return [];
 
-    int stashCount = cast(int) result.output.split("\n").length - 1;
     if (stashCount <= 0)
         return [];
 
@@ -96,6 +103,14 @@ SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
     stashStr ~= "≡";
 
     return [SegmentInfo(" " ~ stashStr ~ " ", theme.gitStashFg, theme.gitStashBg)];
+}
+
+extern(C) void git_libgit2_init();
+extern(C) void git_libgit2_shutdown();
+
+extern(C) int increment(size_t index, const(char)* message, const(git_oid)* stash_id, void* payload) {
+    (cast(size_t*)payload)[0]++;
+    return 0;
 }
 
 private:
@@ -116,64 +131,81 @@ GitStatus getGitStatus(string cwd)
 {
     GitStatus status;
 
-    // Check if we're in a git repository
-    auto gitDirResult = execute(["git", "rev-parse", "--git-dir"], null, Config.none, size_t.max, cwd);
-    if (gitDirResult.status != 0)
+    git_libgit2_init();
+    scope(exit) git_libgit2_shutdown();
+
+    git_repository* repo;
+    if (git_repository_open(&repo, cwd.toStringz) != 0)
         return status;
+    scope(exit) git_repository_free(repo);
 
-    // Get the status
-    auto statusResult = execute(["git", "status", "--porcelain", "--branch"], null, Config.none, size_t.max, cwd);
-    if (statusResult.status != 0)
-        return status;
-
-    auto lines = statusResult.output.split("\n");
-
-    // Try to parse branch info
-    auto branchLine = lines.find!(l => l.startsWith("##"));
-    if (!branchLine.empty)
+    // Get branch info
+    git_reference* head;
+    if (git_repository_head(&head, repo) == 0)
     {
-        auto branchInfo = branchLine.front[3 .. $].strip();
-        auto branchMatch = branchInfo.matchFirst(branchRegex);
-        if (!branchMatch.empty)
+        scope(exit) git_reference_free(head);
+        if (git_reference_is_branch(head))
         {
-            status.branch = branchMatch[1];
-            if (branchMatch.length > 6 && branchMatch[6].length > 0)
-                status.ahead = branchMatch[6].to!int;
-            if (branchMatch.length > 9 && branchMatch[9].length > 0)
-                status.behind = branchMatch[9].to!int;
-        }
-    }
+            status.branch = git_reference_shorthand(head).fromStringz.idup;
 
-    // If we couldn't parse branch info, try git describe
-    if (status.branch.length == 0)
-    {
-        auto describeResult = execute(["git", "describe", "--tags", "--always"], null, Config.none, size_t.max, cwd);
-        if (describeResult.status == 0)
-        {
-            status.branch = "⎇ " ~ describeResult.output.strip();
+            // Get ahead/behind
+            git_reference* upstream;
+            if (git_branch_upstream(&upstream, head) == 0)
+            {
+                scope(exit) git_reference_free(upstream);
+                size_t ahead, behind;
+                if (git_graph_ahead_behind(&ahead, &behind, repo, git_reference_target(head), git_reference_target(upstream)) == 0)
+                {
+                    status.ahead = cast(int)ahead;
+                    status.behind = cast(int)behind;
+                }
+            }
         }
         else
         {
-            status.branch = "Big Bang";
-        }
-    }
-
-    // Parse status
-    foreach (line; lines)
-    {
-        if (line.length >= 2 && !line.startsWith("##"))
-        {
-            if (line[0 .. 2] == "??")
-                status.untracked++;
-            else if (line[0 .. 2].among("DD", "AU", "UD", "UA", "DU", "AA", "UU"))
-                status.conflicted++;
+            git_object* obj;
+            if (git_reference_peel(&obj, head, GIT_OBJ_COMMIT) == 0)
+            {
+                scope(exit) git_object_free(obj);
+                char[GIT_OID_HEXSZ + 1] buf;
+                git_oid_tostr(buf.ptr, buf.length, git_object_id(obj));
+                status.branch = "⎇ " ~ buf[0 .. 7].idup;
+            }
             else
             {
-                if (line[0] != ' ')
-                    status.staged++;
-                if (line[1] != ' ')
-                    status.notStaged++;
+                status.branch = "Big Bang";
             }
+        }
+    }
+    else
+    {
+        status.branch = "Big Bang";
+    }
+
+    // Get status
+    git_status_options statusopt = GIT_STATUS_OPTIONS_INIT;
+    statusopt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+                      GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+                      GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+    git_status_list* statusList;
+    if (git_status_list_new(&statusList, repo, &statusopt) == 0)
+    {
+        scope(exit) git_status_list_free(statusList);
+        size_t count = git_status_list_entrycount(statusList);
+        for (size_t i = 0; i < count; i++)
+        {
+            const(git_status_entry)* entry = git_status_byindex(statusList, i);
+            if (entry.status & GIT_STATUS_WT_NEW)
+                status.untracked++;
+            else if (entry.status & GIT_STATUS_INDEX_NEW)
+                status.staged++;
+            else if (entry.status & GIT_STATUS_INDEX_MODIFIED)
+                status.staged++;
+            else if (entry.status & GIT_STATUS_WT_MODIFIED)
+                status.notStaged++;
+            else if (entry.status & GIT_STATUS_CONFLICTED)
+                status.conflicted++;
         }
     }
 
@@ -181,5 +213,3 @@ GitStatus getGitStatus(string cwd)
 
     return status;
 }
-
-enum branchRegex = ctRegex!(r"^(\S+?)(\.{3}(\S+?)( \[(ahead (\d+)(, )?)?(behind (\d+))?\])?)?$");
