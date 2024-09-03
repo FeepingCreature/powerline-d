@@ -30,7 +30,6 @@ Powerline-D supports various version control systems, providing a quick look int
 Powerline-D is highly customizable through a JSON configuration file, allowing you to:
 
 - Add, remove, and rearrange segments
-- Create custom segments
 - Choose from different themes or create your own
 - Configure individual segments
 
