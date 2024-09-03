@@ -4,8 +4,9 @@ import std.json;
 import std.process;
 import core.sys.posix.unistd;
 import std.path;
-import std.array;
 import std.algorithm;
+import std.array;
+import std.ascii;
 import std.range;
 import std.file;
 import std.string;
@@ -280,12 +281,9 @@ SegmentInfo[] jobsSegment(ThemeColors theme, string cwd, string shell)
     {
         case "bash":
         case "zsh":
-            auto result = execute(["ps", "-o", "ppid="], null, Config.none, size_t.max, cwd);
-            if (result.status == 0)
-            {
-                auto ppid = thisProcessID.to!string;
-                numJobs = cast(int)(result.output.split.count!(line => line.strip == ppid)) - 1;
-            }
+            // reimplement internally cause calling ps is too slow
+            // auto result = execute(["ps", "-o", "ppid="], null, Config.none, size_t.max, cwd);
+            numJobs = countJobsForBashZsh();
             break;
         case "fish":
             auto result = execute(["fish", "-c", "jobs -p | wc -l"], null, Config.none, size_t.max, cwd);
@@ -306,6 +304,58 @@ SegmentInfo[] jobsSegment(ThemeColors theme, string cwd, string shell)
                 theme.jobsFg,
                 theme.jobsBg)
     ];
+}
+
+// This is implemented in basically C because it has to scan a lot of files so we want to bypass the GC.
+// Milliseconds matter here.
+int countJobsForBashZsh()
+{
+    import core.stdc.stdio : FILE, fopen, fclose, fgets, snprintf;
+    import core.stdc.string : strlen;
+    import core.sys.posix.dirent : dirent, DIR, DT_DIR, opendir, closedir, readdir;
+    enum MAX_PATH = 256;
+    char[MAX_PATH] stat_path;
+    dirent* entry;
+    char[1024] buffer;
+    int count = -1;
+    auto ppid = getppid().to!string.representation;
+
+    auto dir = opendir("/proc");
+    if (dir is null)
+        return 0;
+
+    scope(exit) closedir(dir);
+
+    while ((entry = readdir(dir)) !is null)
+    {
+        if (entry.d_type != DT_DIR)
+            continue;
+
+        auto name = entry.d_name[0 .. strlen(entry.d_name.ptr)];
+        if (!name.all!isDigit)
+            continue;
+
+        snprintf(stat_path.ptr, MAX_PATH, "/proc/%s/stat", name.ptr);
+
+        auto file = fopen(stat_path.ptr, "r");
+        if (file is null)
+            continue;
+
+        scope(exit) fclose(file);
+
+        if (fgets(buffer.ptr, buffer.length, file) is null)
+            continue;
+
+        auto parts = splitter(cast(ubyte[])buffer, ' ');
+        parts.popFrontN(3);
+
+        if (!parts.empty && parts.front == ppid)
+        {
+            count++;
+        }
+    }
+
+    return count > 0 ? count : 0;
 }
 
 SegmentInfo[] timeSegment(ThemeColors theme)
