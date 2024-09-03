@@ -27,12 +27,11 @@ SegmentInfo[] usernameSegment(ThemeColors theme)
         return [];
 
     int bgcolor = username == "root" ?
-        theme.usernameRootBg :
-        theme.usernameBg;
+        theme.usernameRootBg : theme.usernameBg;
 
     return [SegmentInfo(" " ~ username ~ " ",
-                       theme.usernameFg,
-                       bgcolor)];
+                theme.usernameFg,
+                bgcolor)];
 }
 
 SegmentInfo[] hostnameSegment(ThemeColors theme, JSONValue config)
@@ -56,9 +55,11 @@ SegmentInfo[] hostnameSegment(ThemeColors theme, JSONValue config)
     }
     else
     {
-        return [SegmentInfo(" " ~ hostnameStr ~ " ",
-                           theme.hostnameFg,
-                           theme.hostnameBg)];
+        return [
+            SegmentInfo(" " ~ hostnameStr ~ " ",
+                    theme.hostnameFg,
+                    theme.hostnameBg)
+        ];
     }
 }
 
@@ -95,14 +96,16 @@ SegmentInfo[] uptimeSegment(ThemeColors theme)
         if (uptime.status == 0)
         {
             string uptimeStr = uptime.output.strip();
-            return [SegmentInfo(" " ~ uptimeStr ~ " ", theme.timeFg, theme.timeBg)];
+            return [
+                SegmentInfo(" " ~ uptimeStr ~ " ", theme.timeFg, theme.timeBg)
+            ];
         }
     }
     catch (Exception e)
     {
         // Fallback to manual calculation if 'uptime -p' is not available
         auto currentTime = Clock.currTime();
-        auto bootTime = SysTime.fromUnixTime(0);  // You might need to find a way to get actual boot time
+        auto bootTime = SysTime.fromUnixTime(0); // You might need to find a way to get actual boot time
         auto uptime = currentTime - bootTime;
 
         auto days = uptime.total!"days";
@@ -137,8 +140,8 @@ SegmentInfo[] sshSegment(ThemeColors theme)
     if ("SSH_CLIENT" in environment)
     {
         return [SegmentInfo(" SSH ",
-                           theme.sshFg,
-                           theme.sshBg)];
+                    theme.sshFg,
+                    theme.sshBg)];
     }
     return [];
 }
@@ -150,8 +153,8 @@ SegmentInfo[] readonlySegment(ThemeColors theme, string cwd)
     if ((attrIsDir(attrs) || attrIsFile(attrs)) && access(cwd.ptr, W_OK) != 0)
     {
         return [SegmentInfo(" RO ",
-                           theme.readonlyFg,
-                           theme.readonlyBg)];
+                    theme.readonlyFg,
+                    theme.readonlyBg)];
     }
     return [];
 }
@@ -172,9 +175,11 @@ SegmentInfo[] virtualEnvSegment(ThemeColors theme)
 
     string envName = baseName(env);
 
-    return [SegmentInfo(" " ~ envName ~ " ",
-                       theme.virtualEnvFg,
-                       theme.virtualEnvBg)];
+    return [
+        SegmentInfo(" " ~ envName ~ " ",
+                theme.virtualEnvFg,
+                theme.virtualEnvBg)
+    ];
 }
 
 SegmentInfo[] awsProfileSegment(ThemeColors theme)
@@ -184,14 +189,18 @@ SegmentInfo[] awsProfileSegment(ThemeColors theme)
     if (awsProfile.empty)
         return [];
 
-    return [SegmentInfo(" aws:" ~ baseName(awsProfile) ~ " ",
-                       theme.awsProfileFg,
-                       theme.awsProfileBg)];
+    return [
+        SegmentInfo(" aws:" ~ baseName(awsProfile) ~ " ",
+                theme.awsProfileFg,
+                theme.awsProfileBg)
+    ];
 }
 
 SegmentInfo[] batterySegment(ThemeColors theme, JSONValue config)
 {
-    string[] batteryDirs = ["/sys/class/power_supply/BAT0", "/sys/class/power_supply/BAT1"];
+    string[] batteryDirs = [
+        "/sys/class/power_supply/BAT0", "/sys/class/power_supply/BAT1"
+    ];
     string batteryDir;
 
     foreach (dir; batteryDirs)
@@ -227,7 +236,7 @@ SegmentInfo[] batterySegment(ThemeColors theme, JSONValue config)
     }
 
     int fg, bg;
-    if (capacity < 20)  // You can adjust this threshold
+    if (capacity < 20) // You can adjust this threshold
     {
         fg = theme.batteryLowFg;
         bg = theme.batteryLowBg;
@@ -255,10 +264,12 @@ SegmentInfo[] exitCodeSegment(ThemeColors theme, int prevError)
     if (prevError == 0)
         return [];
 
-    return [SegmentInfo(" ERROR " ~ prevError.to!string ~ " ",
-                       theme.cmdFailedFg,
-                       theme.cmdFailedBg,
-                       null, -1, true)];  // Set bold to true
+    return [
+        SegmentInfo(" ERROR " ~ prevError.to!string ~ " ",
+                theme.cmdFailedFg,
+                theme.cmdFailedBg,
+                null, -1, true)
+    ]; // Set bold to true
 }
 
 SegmentInfo[] jobsSegment(ThemeColors theme, string cwd, string shell)
@@ -290,9 +301,11 @@ SegmentInfo[] jobsSegment(ThemeColors theme, string cwd, string shell)
     if (numJobs <= 0)
         return [];
 
-    return [SegmentInfo(" " ~ numJobs.to!string ~ " ",
-                       theme.jobsFg,
-                       theme.jobsBg)];
+    return [
+        SegmentInfo(" " ~ numJobs.to!string ~ " ",
+                theme.jobsFg,
+                theme.jobsBg)
+    ];
 }
 
 SegmentInfo[] timeSegment(ThemeColors theme)
@@ -301,8 +314,8 @@ SegmentInfo[] timeSegment(ThemeColors theme)
     string timeStr = format(" %02d:%02d:%02d ", now.hour, now.minute, now.second);
 
     return [SegmentInfo(timeStr,
-                       theme.timeFg,
-                       theme.timeBg)];
+                theme.timeFg,
+                theme.timeBg)];
 }
 
 SegmentInfo[] nodeVersionSegment(ThemeColors theme, string cwd)
@@ -312,7 +325,9 @@ SegmentInfo[] nodeVersionSegment(ThemeColors theme, string cwd)
         return [];
 
     string version_ = result.output.strip();
-    return [SegmentInfo("node " ~ version_, theme.virtualEnvFg, theme.virtualEnvBg)];
+    return [
+        SegmentInfo("node " ~ version_, theme.virtualEnvFg, theme.virtualEnvBg)
+    ];
 }
 
 SegmentInfo[] npmVersionSegment(ThemeColors theme, string cwd)
@@ -322,7 +337,9 @@ SegmentInfo[] npmVersionSegment(ThemeColors theme, string cwd)
         return [];
 
     string version_ = result.output.strip();
-    return [SegmentInfo("npm " ~ version_, theme.virtualEnvFg, theme.virtualEnvBg)];
+    return [
+        SegmentInfo("npm " ~ version_, theme.virtualEnvFg, theme.virtualEnvBg)
+    ];
 }
 
 SegmentInfo[] phpVersionSegment(ThemeColors theme, string cwd)
@@ -332,7 +349,9 @@ SegmentInfo[] phpVersionSegment(ThemeColors theme, string cwd)
         return [];
 
     string version_ = result.output.split("-")[0];
-    return [SegmentInfo(" " ~ version_ ~ " ", theme.virtualEnvFg, theme.virtualEnvBg)];
+    return [
+        SegmentInfo(" " ~ version_ ~ " ", theme.virtualEnvFg, theme.virtualEnvBg)
+    ];
 }
 
 SegmentInfo[] rubyVersionSegment(ThemeColors theme)
@@ -342,7 +361,7 @@ SegmentInfo[] rubyVersionSegment(ThemeColors theme)
         return [];
 
     string version_ = result.output.split(" ")[1];
-    string gemSet = environment.get("GEM_HOME", "@").split("@")[$-1];
+    string gemSet = environment.get("GEM_HOME", "@").split("@")[$ - 1];
 
     string content = version_;
     if (!gemSet.empty)
@@ -358,9 +377,11 @@ SegmentInfo[] rbenvSegment(ThemeColors theme, string cwd)
         return [];
 
     string version_ = result.output.strip();
-    return [SegmentInfo(" " ~ version_ ~ " ",
-                       theme.virtualEnvFg,
-                       theme.virtualEnvBg)];
+    return [
+        SegmentInfo(" " ~ version_ ~ " ",
+                theme.virtualEnvFg,
+                theme.virtualEnvBg)
+    ];
 }
 
 SegmentInfo[] rootSegment(ThemeColors theme, string shell)
@@ -383,8 +404,8 @@ SegmentInfo[] rootSegment(ThemeColors theme, string shell)
     }
 
     return [SegmentInfo(rootIndicator,
-                       theme.cmdPassedFg,
-                       theme.cmdPassedBg)];
+                theme.cmdPassedFg,
+                theme.cmdPassedBg)];
 }
 
 SegmentInfo[] setTermTitleSegment(ThemeColors theme, string cwd, string shell)
@@ -404,20 +425,21 @@ SegmentInfo[] setTermTitleSegment(ThemeColors theme, string cwd, string shell)
             break;
         default:
             import core.sys.posix.unistd : gethostname;
+
             char[256] hostname;
             if (gethostname(hostname.ptr, hostname.length) == 0)
             {
                 string hostnameStr = hostname.ptr.fromStringz.idup;
                 setTitle = format("\033]0;%s@%s: %s\007",
-                                environment.get("USER"),
-                                hostnameStr.split(".")[0],
-                                cwd);
+                        environment.get("USER"),
+                        hostnameStr.split(".")[0],
+                        cwd);
             }
             else
             {
                 setTitle = format("\033]0;%s@unknown: %s\007",
-                                environment.get("USER"),
-                                cwd);
+                        environment.get("USER"),
+                        cwd);
             }
             break;
     }
@@ -451,14 +473,24 @@ SegmentInfo[] svnSegments(ThemeColors theme, string cwd)
     RepoStats stats;
     foreach (line; statusResult.output.splitLines())
     {
-        if (line.empty) continue;
+        if (line.empty)
+            continue;
         switch (line[0])
         {
-            case '?': stats.new_++; break;
-            case 'A': stats.staged++; break;
-            case 'M': stats.changed++; break;
-            case 'C': stats.conflicted++; break;
-            default: break;
+            case '?':
+                stats.new_++;
+                break;
+            case 'A':
+                stats.staged++;
+                break;
+            case 'M':
+                stats.changed++;
+                break;
+            case 'C':
+                stats.conflicted++;
+                break;
+            default:
+                break;
         }
     }
 
@@ -471,10 +503,14 @@ SegmentInfo[] svnSegments(ThemeColors theme, string cwd)
     if (stats.dirty)
     {
         string status = "";
-        if (stats.new_ > 0) status ~= "?" ~ stats.new_.to!string;
-        if (stats.changed > 0) status ~= "+" ~ stats.changed.to!string;
-        if (stats.staged > 0) status ~= "→" ~ stats.staged.to!string;
-        if (stats.conflicted > 0) status ~= "×" ~ stats.conflicted.to!string;
+        if (stats.new_ > 0)
+            status ~= "?" ~ stats.new_.to!string;
+        if (stats.changed > 0)
+            status ~= "+" ~ stats.changed.to!string;
+        if (stats.staged > 0)
+            status ~= "→" ~ stats.staged.to!string;
+        if (stats.conflicted > 0)
+            status ~= "×" ~ stats.conflicted.to!string;
         segments ~= SegmentInfo(" " ~ status ~ " ", theme.repoDirtyFg, theme.repoDirtyBg);
     }
 
@@ -521,9 +557,12 @@ SegmentInfo[] fossilSegments(ThemeColors theme, string cwd)
     if (stats.dirty)
     {
         string status = "";
-        if (stats.new_ > 0) status ~= "?" ~ stats.new_.to!string;
-        if (stats.changed > 0) status ~= "+" ~ stats.changed.to!string;
-        if (stats.staged > 0) status ~= "→" ~ stats.staged.to!string;
+        if (stats.new_ > 0)
+            status ~= "?" ~ stats.new_.to!string;
+        if (stats.changed > 0)
+            status ~= "+" ~ stats.changed.to!string;
+        if (stats.staged > 0)
+            status ~= "→" ~ stats.staged.to!string;
         segments ~= SegmentInfo(" " ~ status ~ " ", theme.repoDirtyFg, theme.repoDirtyBg);
     }
 
@@ -561,10 +600,14 @@ SegmentInfo[] bzrSegments(ThemeColors theme, string cwd)
     if (stats.dirty)
     {
         string status = "";
-        if (stats.new_ > 0) status ~= "?" ~ stats.new_.to!string;
-        if (stats.changed > 0) status ~= "+" ~ stats.changed.to!string;
-        if (stats.staged > 0) status ~= "→" ~ stats.staged.to!string;
-        if (stats.conflicted > 0) status ~= "×" ~ stats.conflicted.to!string;
+        if (stats.new_ > 0)
+            status ~= "?" ~ stats.new_.to!string;
+        if (stats.changed > 0)
+            status ~= "+" ~ stats.changed.to!string;
+        if (stats.staged > 0)
+            status ~= "→" ~ stats.staged.to!string;
+        if (stats.conflicted > 0)
+            status ~= "×" ~ stats.conflicted.to!string;
         segments ~= SegmentInfo(" " ~ status ~ " ", theme.repoDirtyFg, theme.repoDirtyBg);
     }
 
@@ -580,15 +623,27 @@ SegmentInfo[] hgSegments(ThemeColors theme, string cwd)
     RepoStats stats;
     foreach (line; result.output.splitLines())
     {
-        if (line.empty) continue;
+        if (line.empty)
+            continue;
         switch (line[0])
         {
-            case '?': stats.new_++; break;
-            case 'A': stats.staged++; break;
-            case 'M': stats.changed++; break;
-            case 'R': stats.changed++; break;
-            case '!': stats.changed++; break;
-            default: break;
+            case '?':
+                stats.new_++;
+                break;
+            case 'A':
+                stats.staged++;
+                break;
+            case 'M':
+                stats.changed++;
+                break;
+            case 'R':
+                stats.changed++;
+                break;
+            case '!':
+                stats.changed++;
+                break;
+            default:
+                break;
         }
     }
 
@@ -604,9 +659,12 @@ SegmentInfo[] hgSegments(ThemeColors theme, string cwd)
     if (stats.dirty)
     {
         string status = "";
-        if (stats.new_ > 0) status ~= "?" ~ stats.new_.to!string;
-        if (stats.changed > 0) status ~= "+" ~ stats.changed.to!string;
-        if (stats.staged > 0) status ~= "→" ~ stats.staged.to!string;
+        if (stats.new_ > 0)
+            status ~= "?" ~ stats.new_.to!string;
+        if (stats.changed > 0)
+            status ~= "+" ~ stats.changed.to!string;
+        if (stats.staged > 0)
+            status ~= "→" ~ stats.staged.to!string;
         segments ~= SegmentInfo(" " ~ status ~ " ", theme.repoDirtyFg, theme.repoDirtyBg);
     }
 

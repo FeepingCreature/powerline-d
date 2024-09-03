@@ -38,8 +38,10 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
     }
     segments ~= SegmentInfo(" " ~ status.branch ~ " ", fg, bg);
 
-    string check(int count, string code) {
-        if (count == 0) return "";
+    string check(int count, string code)
+    {
+        if (count == 0)
+            return "";
         return count == 1 ? code : count.to!string ~ code;
     }
     // Status segments
@@ -61,12 +63,14 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
     if (status.untracked > 0)
     {
         const content = check(status.untracked, "?");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitUntrackedFg, theme.gitUntrackedBg);
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitUntrackedFg, theme
+                .gitUntrackedBg);
     }
     if (status.conflicted > 0)
     {
         const content = check(status.conflicted, "!");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitConflictedFg, theme.gitConflictedBg);
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitConflictedFg, theme
+                .gitConflictedBg);
     }
 
     return segments;
@@ -78,7 +82,7 @@ SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
     if (result.status != 0)
         return [];
 
-    int stashCount = cast(int)result.output.split("\n").length - 1;
+    int stashCount = cast(int) result.output.split("\n").length - 1;
     if (stashCount <= 0)
         return [];
 
@@ -122,8 +126,9 @@ GitStatus getGitStatus(string cwd)
     auto branchLine = lines.find!(l => l.startsWith("##"));
     if (!branchLine.empty)
     {
-        auto branchInfo = branchLine.front[3..$].strip();
-        auto branchMatch = branchInfo.matchFirst(r"^(\S+?)(\.{3}(\S+?)( \[(ahead (\d+)(, )?)?(behind (\d+))?\])?)?$");
+        auto branchInfo = branchLine.front[3 .. $].strip();
+        auto branchMatch = branchInfo.matchFirst(
+                r"^(\S+?)(\.{3}(\S+?)( \[(ahead (\d+)(, )?)?(behind (\d+))?\])?)?$");
         if (!branchMatch.empty)
         {
             status.branch = branchMatch[1];
@@ -153,9 +158,9 @@ GitStatus getGitStatus(string cwd)
     {
         if (line.length >= 2 && !line.startsWith("##"))
         {
-            if (line[0..2] == "??")
+            if (line[0 .. 2] == "??")
                 status.untracked++;
-            else if (line[0..2].among("DD", "AU", "UD", "UA", "DU", "AA", "UU"))
+            else if (line[0 .. 2].among("DD", "AU", "UD", "UA", "DU", "AA", "UU"))
                 status.conflicted++;
             else
             {

@@ -1,6 +1,7 @@
 module base;
 
-struct SegmentInfo {
+struct SegmentInfo
+{
     string content;
     int fg;
     int bg;

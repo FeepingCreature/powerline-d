@@ -5,7 +5,8 @@ import std.json;
 import std.file;
 import std.path;
 
-struct ThemeColors {
+struct ThemeColors
+{
     int reset = -1;
     int usernameFg = 250;
     int usernameBg = 240;
@@ -95,6 +96,7 @@ ThemeColors loadTheme(string themeName)
             catch (Exception e)
             {
                 import std.stdio : stderr;
+
                 stderr.writefln("Error loading theme '%s': %s", themeName, e.msg);
             }
         }
@@ -109,23 +111,24 @@ ThemeColors deserializeTheme(JSONValue json)
     ThemeColors theme;
 
     static foreach (member; __traits(allMembers, ThemeColors))
-    {{
-        static if (is(typeof(__traits(getMember, theme, member)) == int))
+    {
         {
-            if (member in json)
+            static if (is(typeof(__traits(getMember, theme, member)) == int))
             {
-                __traits(getMember, theme, member) = json[member].integer.to!int;
+                if (member in json)
+                {
+                    __traits(getMember, theme, member) = json[member].integer.to!int;
+                }
+            }
+            else static if (is(typeof(__traits(getMember, theme, member)) == bool))
+            {
+                if (member in json)
+                {
+                    __traits(getMember, theme, member) = json[member].boolean;
+                }
             }
         }
-        else static if (is(typeof(__traits(getMember, theme, member)) == bool))
-        {
-            if (member in json)
-            {
-                __traits(getMember, theme, member) = json[member].boolean;
-            }
-        }
-    }}
+    }
 
     return theme;
 }
-

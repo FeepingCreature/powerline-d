@@ -49,19 +49,24 @@ class Powerline
     }
 
     void append(string content, int fg, int bg, string separator = null,
-                int separatorFg = -1, bool sanitize = true)
+            int separatorFg = -1, bool sanitize = true)
     {
         if (shell == "bash" && sanitize)
         {
             import std.regex : regex, replaceAll;
+
             content = content.replaceAll(regex(r"([`$])"), "\\$1");
         }
         segments ~= SegmentInfo(content, fg, bg,
-            separator ? separator : this.separator,
-            separatorFg != -1 ? separatorFg : bg);
+                separator ? separator
+                : this.separator,
+                separatorFg != -1 ? separatorFg : bg);
     }
 
-    @property ThemeColors theme() { return _theme; }
+    @property ThemeColors theme()
+    {
+        return _theme;
+    }
 
     private string fgcolor(int code)
     {
@@ -183,9 +188,9 @@ void main(string[] args)
     int prevError = 0;
 
     auto helpInformation = getopt(
-        args,
-        "shell", "Set this to your shell type (bash|tcsh|zsh|bare)", &shell,
-        "prev-error", "Error code returned by the last command", &prevError,
+            args,
+            "shell", "Set this to your shell type (bash|tcsh|zsh|bare)", &shell,
+            "prev-error", "Error code returned by the last command", &prevError,
     );
 
     if (helpInformation.helpWanted)
@@ -206,7 +211,7 @@ void main(string[] args)
             if (segmentInfo.content.length > 0)
             {
                 powerline.append(segmentInfo.content, segmentInfo.fg, segmentInfo.bg,
-                                segmentInfo.separator, segmentInfo.separatorFg, segmentInfo.bold);
+                        segmentInfo.separator, segmentInfo.separatorFg, segmentInfo.bold);
             }
         }
     }

@@ -5,12 +5,14 @@ import std.file;
 import std.path;
 import std.json;
 
-struct SegmentConfig {
+struct SegmentConfig
+{
     string type;
     JSONValue options;
 }
 
-struct PowerlineConfig {
+struct PowerlineConfig
+{
     SegmentConfig[] segments;
     string mode = "patched";
     string theme = "default";
@@ -36,6 +38,7 @@ PowerlineConfig findConfig()
             catch (Exception e)
             {
                 import std.stdio : stderr;
+
                 stderr.writefln("Config file (%s) could not be decoded! Error: %s", location, e.msg);
             }
         }
@@ -83,8 +86,10 @@ PowerlineConfig deserializeConfig(JSONValue json)
         }
     }
 
-    if ("mode" in json) config.mode = json["mode"].str;
-    if ("theme" in json) config.theme = json["theme"].str;
+    if ("mode" in json)
+        config.mode = json["mode"].str;
+    if ("theme" in json)
+        config.theme = json["theme"].str;
 
     return config;
 }

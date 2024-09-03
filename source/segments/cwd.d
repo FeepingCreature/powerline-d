@@ -24,7 +24,7 @@ SegmentInfo[] cwdSegments(ThemeColors theme, string cwd, string separatorThin, J
     if (maxDepth > 0 && names.length > maxDepth)
     {
         int nBefore = (maxDepth > 2) ? 2 : maxDepth - 1;
-        names = names[0..nBefore] ~ [ELLIPSIS] ~ names[$ - (maxDepth - nBefore) .. $];
+        names = names[0 .. nBefore] ~ [ELLIPSIS] ~ names[$ - (maxDepth - nBefore) .. $];
     }
 
     SegmentInfo[] segments;
