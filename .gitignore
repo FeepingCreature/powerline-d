@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/powerline-d
+powerline-d.so
+powerline-d.dylib
+powerline-d.dll
+powerline-d.a
+powerline-d.lib
+powerline-d-test-*
+*.exe
+*.o
+*.obj
+*.lst

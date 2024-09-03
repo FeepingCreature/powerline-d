@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"@FeepingCreature"
+	],
+	"copyright": "Copyright © 2024, @FeepingCreature",
+	"description": "A D port of powerline-shell by Claude 3.5 Sonnet.",
+	"license": "MIT",
+	"name": "powerline-d",
+    "dependencies": {
+        "colorize": "~>1.0.5"
+    }
+}
