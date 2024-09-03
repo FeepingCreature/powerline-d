@@ -19,12 +19,6 @@ struct RepoStats
     {
         return new_ + changed + staged + conflicted > 0;
     }
-
-    string nOrEmpty(string key)() const
-    {
-        int value = __traits(getMember, this, key);
-        return value > 1 ? value.to!string : "";
-    }
 }
 
 string getValidCwd()
