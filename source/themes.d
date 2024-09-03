@@ -44,8 +44,8 @@ struct ThemeColors
     int gitBehindFg = 250;
     int gitStagedBg = 22;
     int gitStagedFg = 15;
-    int gitNotstagedBg = 130;
-    int gitNotstagedFg = 15;
+    int gitNotStagedBg = 130;
+    int gitNotStagedFg = 15;
     int gitUntrackedBg = 52;
     int gitUntrackedFg = 15;
     int gitConflictedBg = 9;

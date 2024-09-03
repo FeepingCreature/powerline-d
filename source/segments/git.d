@@ -55,16 +55,22 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
         const content = check(status.behind, "⬇ ");
         segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitBehindFg, theme.gitBehindBg);
     }
-    if (status.staged > 0 || status.notStaged > 0)
+    if (status.staged > 0)
     {
-        const content = check(status.staged, "✔   ") ~ check(status.notStaged, "✎   ");
+        const content = check(status.staged, "✔   ");
         segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitStagedFg, theme.gitStagedBg);
+    }
+    if (status.notStaged > 0)
+    {
+        const content = check(status.notStaged, "✎   ");
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ",
+            theme.gitNotStagedFg, theme.gitNotStagedBg);
     }
     if (status.untracked > 0)
     {
         const content = check(status.untracked, "?");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitUntrackedFg, theme
-                .gitUntrackedBg);
+        segments ~= SegmentInfo(" " ~ content.strip ~ " ",
+            theme.gitUntrackedFg, theme.gitUntrackedBg);
     }
     if (status.conflicted > 0)
     {
