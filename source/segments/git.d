@@ -47,35 +47,35 @@ SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
     // Status segments
     if (status.ahead > 0)
     {
-        const content = check(status.ahead, "⬆ ");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitAheadFg, theme.gitAheadBg);
+        const content = check(status.ahead, "⬆");
+        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitAheadFg, theme.gitAheadBg);
     }
     if (status.behind > 0)
     {
-        const content = check(status.behind, "⬇ ");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitBehindFg, theme.gitBehindBg);
+        const content = check(status.behind, "⬇");
+        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitBehindFg, theme.gitBehindBg);
     }
     if (status.staged > 0)
     {
-        const content = check(status.staged, "✔   ");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitStagedFg, theme.gitStagedBg);
+        const content = check(status.staged, "✔");
+        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitStagedFg, theme.gitStagedBg);
     }
     if (status.notStaged > 0)
     {
-        const content = check(status.notStaged, "✎   ");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ",
+        const content = check(status.notStaged, "✎");
+        segments ~= SegmentInfo(" " ~ content ~ " ",
             theme.gitNotStagedFg, theme.gitNotStagedBg);
     }
     if (status.untracked > 0)
     {
         const content = check(status.untracked, "?");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ",
+        segments ~= SegmentInfo(" " ~ content ~ " ",
             theme.gitUntrackedFg, theme.gitUntrackedBg);
     }
     if (status.conflicted > 0)
     {
         const content = check(status.conflicted, "!");
-        segments ~= SegmentInfo(" " ~ content.strip ~ " ", theme.gitConflictedFg, theme
+        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitConflictedFg, theme
                 .gitConflictedBg);
     }
 
