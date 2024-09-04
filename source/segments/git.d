@@ -9,7 +9,7 @@ import std.regex;
 import base;
 import config;
 import themes;
-import deimos.git2;
+import git2;
 
 SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
 {
@@ -105,9 +105,6 @@ SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
     return [SegmentInfo(" " ~ stashStr ~ " ", theme.gitStashFg, theme.gitStashBg)];
 }
 
-extern(C) void git_libgit2_init();
-extern(C) void git_libgit2_shutdown();
-
 extern(C) int increment(size_t index, const(char)* message, const(git_oid)* stash_id, void* payload) {
     (cast(size_t*)payload)[0]++;
     return 0;
@@ -164,10 +161,10 @@ GitStatus getGitStatus(string cwd)
         else
         {
             git_object* obj;
-            if (git_reference_peel(&obj, head, GIT_OBJ_COMMIT) == 0)
+            if (git_reference_peel(&obj, head, GIT_OBJECT_COMMIT) == 0)
             {
                 scope(exit) git_object_free(obj);
-                char[GIT_OID_HEXSZ + 1] buf;
+                char[GIT_OID_SHA1_HEXSIZE + 1] buf;
                 git_oid_tostr(buf.ptr, buf.length, git_object_id(obj));
                 status.branch = "⎇ " ~ buf[0 .. 7].idup;
             }
@@ -183,7 +180,7 @@ GitStatus getGitStatus(string cwd)
     }
 
     // Get status
-    git_status_options statusopt = GIT_STATUS_OPTIONS_INIT;
+    git_status_options statusopt = git_status_options(GIT_STATUS_OPTIONS_VERSION);
     statusopt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
                       GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
