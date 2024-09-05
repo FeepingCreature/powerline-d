@@ -19,71 +19,12 @@ static if (!__traits(compiles, GIT_OID_SHA1_HEXSIZE) && __traits(compiles, GIT_O
 SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
 {
     auto status = getGitStatus(cwd);
-    if (status.branch.length == 0)
+    if (status.branch.empty)
         return [];
 
     SegmentInfo[] segments;
-
-    // Branch segment
-    int fg, bg;
-    if (status.branch == "Big Bang" || status.branch.startsWith("⎇"))
-    {
-        fg = theme.gitDetachedFg;
-        bg = theme.gitDetachedBg;
-    }
-    else if (status.isClean)
-    {
-        fg = theme.repoCleanFg;
-        bg = theme.repoCleanBg;
-    }
-    else
-    {
-        fg = theme.repoDirtyFg;
-        bg = theme.repoDirtyBg;
-    }
-    segments ~= SegmentInfo(" " ~ status.branch ~ " ", fg, bg);
-
-    string check(int count, string code)
-    {
-        if (count == 0)
-            return "";
-        return count == 1 ? code : count.to!string ~ code;
-    }
-    // Status segments
-    if (status.ahead > 0)
-    {
-        const content = check(status.ahead, "⬆");
-        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitAheadFg, theme.gitAheadBg);
-    }
-    if (status.behind > 0)
-    {
-        const content = check(status.behind, "⬇");
-        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitBehindFg, theme.gitBehindBg);
-    }
-    if (status.staged > 0)
-    {
-        const content = check(status.staged, "✔");
-        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitStagedFg, theme.gitStagedBg);
-    }
-    if (status.notStaged > 0)
-    {
-        const content = check(status.notStaged, "✎");
-        segments ~= SegmentInfo(" " ~ content ~ " ",
-            theme.gitNotStagedFg, theme.gitNotStagedBg);
-    }
-    if (status.untracked > 0)
-    {
-        const content = check(status.untracked, "?");
-        segments ~= SegmentInfo(" " ~ content ~ " ",
-            theme.gitUntrackedFg, theme.gitUntrackedBg);
-    }
-    if (status.conflicted > 0)
-    {
-        const content = check(status.conflicted, "!");
-        segments ~= SegmentInfo(" " ~ content ~ " ", theme.gitConflictedFg, theme
-                .gitConflictedBg);
-    }
-
+    segments ~= createBranchSegment(status, theme);
+    segments ~= createStatusSegments(status, theme);
     return segments;
 }
 
@@ -101,7 +42,7 @@ SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
     if (git_stash_foreach(repo, &increment, &stashCount) != 0)
         return [];
 
-    if (stashCount <= 0)
+    if (stashCount == 0)
         return [];
 
     string stashStr = stashCount > 1 ? stashCount.to!string : "";
@@ -110,12 +51,53 @@ SegmentInfo[] gitStashSegment(ThemeColors theme, string cwd)
     return [SegmentInfo(" " ~ stashStr ~ " ", theme.gitStashFg, theme.gitStashBg)];
 }
 
+private:
+
+SegmentInfo createBranchSegment(GitStatus status, ThemeColors theme)
+{
+    int fg, bg;
+    if (status.branch == "Big Bang" || status.branch.startsWith("⎇"))
+    {
+        fg = theme.gitDetachedFg;
+        bg = theme.gitDetachedBg;
+    }
+    else if (status.isClean)
+    {
+        fg = theme.repoCleanFg;
+        bg = theme.repoCleanBg;
+    }
+    else
+    {
+        fg = theme.repoDirtyFg;
+        bg = theme.repoDirtyBg;
+    }
+    return SegmentInfo(" " ~ status.branch ~ " ", fg, bg);
+}
+
+SegmentInfo[] createStatusSegments(GitStatus status, ThemeColors theme)
+{
+    SegmentInfo[] segments;
+    segments ~= createStatusSegment(status.ahead, "⬆", theme.gitAheadFg, theme.gitAheadBg);
+    segments ~= createStatusSegment(status.behind, "⬇", theme.gitBehindFg, theme.gitBehindBg);
+    segments ~= createStatusSegment(status.staged, "✔", theme.gitStagedFg, theme.gitStagedBg);
+    segments ~= createStatusSegment(status.notStaged, "✎", theme.gitNotStagedFg, theme.gitNotStagedBg);
+    segments ~= createStatusSegment(status.untracked, "?", theme.gitUntrackedFg, theme.gitUntrackedBg);
+    segments ~= createStatusSegment(status.conflicted, "!", theme.gitConflictedFg, theme.gitConflictedBg);
+    return segments.filter!(s => !s.content.empty).array;
+}
+
+SegmentInfo createStatusSegment(int count, string symbol, int fg, int bg)
+{
+    if (count == 0)
+        return SegmentInfo.init;
+    string content = count == 1 ? symbol : count.to!string ~ symbol;
+    return SegmentInfo(" " ~ content ~ " ", fg, bg);
+}
+
 extern(C) int increment(size_t index, const(char)* message, const(git_oid)* stash_id, void* payload) {
     (cast(size_t*)payload)[0]++;
     return 0;
 }
-
-private:
 
 struct GitStatus
 {
@@ -141,107 +123,125 @@ GitStatus getGitStatus(string cwd)
         return status;
     scope(exit) git_repository_free(repo);
 
-    // Get branch info
+    if (!getBranchInfo(repo, status))
+        return status;
+
+    getStatusInfo(repo, status);
+
+    return status;
+}
+
+bool getBranchInfo(git_repository* repo, ref GitStatus status)
+{
     git_reference* head;
-    if (git_repository_head(&head, repo) == 0)
-    {
-        scope(exit) git_reference_free(head);
-
-        if (git_reference_is_branch(head))
-        {
-            status.branch = git_reference_shorthand(head).fromStringz.idup;
-
-            // Get ahead/behind
-            git_reference* upstream;
-            if (git_branch_upstream(&upstream, head) == 0)
-            {
-                scope(exit) git_reference_free(upstream);
-                size_t ahead, behind;
-                if (git_graph_ahead_behind(&ahead, &behind, repo, git_reference_target(head), git_reference_target(upstream)) == 0)
-                {
-                    status.ahead = cast(int)ahead;
-                    status.behind = cast(int)behind;
-                }
-            }
-        }
-        else
-        {
-            git_object* target_obj;
-            if (git_reference_peel(&target_obj, head, GIT_OBJECT_COMMIT) == 0)
-            {
-                scope(exit) git_object_free(target_obj);
-
-                git_describe_options describe_options;
-                git_describe_options_init(&describe_options, GIT_DESCRIBE_OPTIONS_VERSION);
-                describe_options.describe_strategy = GIT_DESCRIBE_ALL;
-
-                git_describe_result* describe_result;
-                if (git_describe_commit(&describe_result, target_obj, &describe_options) == 0)
-                {
-                    scope(exit) git_describe_result_free(describe_result);
-
-                    git_buf buf;
-                    git_describe_format_options format_options;
-                    git_describe_format_options_init(&format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
-
-                    if (git_describe_format(&buf, describe_result, &format_options) == 0)
-                    {
-                        scope(exit) git_buf_free(&buf);
-                        status.branch = "⚓ " ~ buf.ptr.fromStringz.idup;
-                    }
-                    else
-                    {
-                        char[GIT_OID_SHA1_HEXSIZE + 1] oid_buf;
-                        git_oid_tostr(oid_buf.ptr, oid_buf.length, git_object_id(target_obj));
-                        status.branch = "⎇ " ~ oid_buf[0 .. 7].idup;
-                    }
-                }
-                else
-                {
-                    char[GIT_OID_SHA1_HEXSIZE + 1] oid_buf;
-                    git_oid_tostr(oid_buf.ptr, oid_buf.length, git_object_id(target_obj));
-                    status.branch = "⎇ " ~ oid_buf[0 .. 7].idup;
-                }
-            }
-            else
-            {
-                status.branch = "Big Bang";
-            }
-        }
-    }
-    else
+    if (git_repository_head(&head, repo) != 0)
     {
         status.branch = "Big Bang";
+        return false;
     }
+    scope(exit) git_reference_free(head);
 
-    // Get status
+    if (git_reference_is_branch(head))
+        return getBranchInfoForBranch(head, repo, status);
+    else
+        return getBranchInfoForDetached(head, status);
+}
+
+bool getBranchInfoForBranch(git_reference* head, git_repository* repo, ref GitStatus status)
+{
+    status.branch = git_reference_shorthand(head).fromStringz.idup;
+
+    git_reference* upstream;
+    if (git_branch_upstream(&upstream, head) != 0)
+        return true;
+    scope(exit) git_reference_free(upstream);
+
+    size_t ahead, behind;
+    if (git_graph_ahead_behind(&ahead, &behind, repo, git_reference_target(head), git_reference_target(upstream)) != 0)
+        return true;
+
+    status.ahead = cast(int)ahead;
+    status.behind = cast(int)behind;
+    return true;
+}
+
+bool getBranchInfoForDetached(git_reference* head, ref GitStatus status)
+{
+    git_object* target_obj;
+    if (git_reference_peel(&target_obj, head, GIT_OBJECT_COMMIT) != 0)
+    {
+        status.branch = "Big Bang";
+        return false;
+    }
+    scope(exit) git_object_free(target_obj);
+
+    git_describe_options describe_options;
+    git_describe_options_init(&describe_options, GIT_DESCRIBE_OPTIONS_VERSION);
+    describe_options.describe_strategy = GIT_DESCRIBE_ALL;
+
+    git_describe_result* describe_result;
+    if (git_describe_commit(&describe_result, target_obj, &describe_options) != 0)
+    {
+        status.branch = getDetachedOid(target_obj);
+        return true;
+    }
+    scope(exit) git_describe_result_free(describe_result);
+
+    git_buf buf;
+    git_describe_format_options format_options;
+    git_describe_format_options_init(&format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
+
+    if (git_describe_format(&buf, describe_result, &format_options) != 0)
+    {
+        status.branch = getDetachedOid(target_obj);
+        return true;
+    }
+    scope(exit) git_buf_free(&buf);
+
+    status.branch = "⚓ " ~ buf.ptr.fromStringz.idup;
+    return true;
+}
+
+string getDetachedOid(git_object* obj)
+{
+    char[GIT_OID_SHA1_HEXSIZE + 1] oid_buf;
+    git_oid_tostr(oid_buf.ptr, oid_buf.length, git_object_id(obj));
+    return "⎇ " ~ oid_buf[0 .. 7].idup;
+}
+
+void getStatusInfo(git_repository* repo, ref GitStatus status)
+{
     git_status_options statusopt = git_status_options(GIT_STATUS_OPTIONS_VERSION);
     statusopt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
                       GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
                       GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+
     git_status_list* statusList;
-    if (git_status_list_new(&statusList, repo, &statusopt) == 0)
+    if (git_status_list_new(&statusList, repo, &statusopt) != 0)
+        return;
+    scope(exit) git_status_list_free(statusList);
+
+    size_t count = git_status_list_entrycount(statusList);
+    for (size_t i = 0; i < count; i++)
     {
-        scope(exit) git_status_list_free(statusList);
-        size_t count = git_status_list_entrycount(statusList);
-        for (size_t i = 0; i < count; i++)
-        {
-            const(git_status_entry)* entry = git_status_byindex(statusList, i);
-            if (entry.status & GIT_STATUS_WT_NEW)
-                status.untracked++;
-            else if (entry.status & GIT_STATUS_INDEX_NEW)
-                status.staged++;
-            else if (entry.status & GIT_STATUS_INDEX_MODIFIED)
-                status.staged++;
-            else if (entry.status & GIT_STATUS_WT_MODIFIED)
-                status.notStaged++;
-            else if (entry.status & GIT_STATUS_CONFLICTED)
-                status.conflicted++;
-        }
+        const(git_status_entry)* entry = git_status_byindex(statusList, i);
+        updateStatusCounts(entry, status);
     }
 
     status.isClean = (status.staged == 0 && status.notStaged == 0 && status.untracked == 0);
+}
 
-    return status;
+void updateStatusCounts(const(git_status_entry)* entry, ref GitStatus status)
+{
+    if (entry.status & GIT_STATUS_WT_NEW)
+        status.untracked++;
+    else if (entry.status & GIT_STATUS_INDEX_NEW)
+        status.staged++;
+    else if (entry.status & GIT_STATUS_INDEX_MODIFIED)
+        status.staged++;
+    else if (entry.status & GIT_STATUS_WT_MODIFIED)
+        status.notStaged++;
+    else if (entry.status & GIT_STATUS_CONFLICTED)
+        status.conflicted++;
 }
