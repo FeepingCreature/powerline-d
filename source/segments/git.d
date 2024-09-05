@@ -161,13 +161,42 @@ GitStatus getGitStatus(string cwd)
         }
         else
         {
-            git_object* obj;
-            if (git_reference_peel(&obj, head, GIT_OBJECT_COMMIT) == 0)
+            git_object* target_obj;
+            if (git_reference_peel(&target_obj, head, GIT_OBJECT_COMMIT) == 0)
             {
-                scope(exit) git_object_free(obj);
-                char[GIT_OID_SHA1_HEXSIZE + 1] buf;
-                git_oid_tostr(buf.ptr, buf.length, git_object_id(obj));
-                status.branch = "⎇ " ~ buf[0 .. 7].idup;
+                scope(exit) git_object_free(target_obj);
+
+                git_describe_options describe_options;
+                git_describe_options_init(&describe_options, GIT_DESCRIBE_OPTIONS_VERSION);
+                describe_options.describe_strategy = GIT_DESCRIBE_ALL;
+
+                git_describe_result* describe_result;
+                if (git_describe_commit(&describe_result, target_obj, &describe_options) == 0)
+                {
+                    scope(exit) git_describe_result_free(describe_result);
+
+                    git_buf buf;
+                    git_describe_format_options format_options;
+                    git_describe_format_options_init(&format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
+
+                    if (git_describe_format(&buf, describe_result, &format_options) == 0)
+                    {
+                        scope(exit) git_buf_free(&buf);
+                        status.branch = "⚓ " ~ buf.ptr.fromStringz.idup;
+                    }
+                    else
+                    {
+                        char[GIT_OID_SHA1_HEXSIZE + 1] oid_buf;
+                        git_oid_tostr(oid_buf.ptr, oid_buf.length, git_object_id(target_obj));
+                        status.branch = "⎇ " ~ oid_buf[0 .. 7].idup;
+                    }
+                }
+                else
+                {
+                    char[GIT_OID_SHA1_HEXSIZE + 1] oid_buf;
+                    git_oid_tostr(oid_buf.ptr, oid_buf.length, git_object_id(target_obj));
+                    status.branch = "⎇ " ~ oid_buf[0 .. 7].idup;
+                }
             }
             else
             {
