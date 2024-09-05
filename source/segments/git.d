@@ -132,7 +132,7 @@ GitStatus getGitStatus(string cwd)
     scope(exit) git_libgit2_shutdown();
 
     git_repository* repo;
-    if (git_repository_open(&repo, cwd.toStringz) != 0)
+    if (git_repository_open_ext(&repo, cwd.toStringz, GIT_REPOSITORY_OPEN_FROM_ENV, null) != 0)
         return status;
     scope(exit) git_repository_free(repo);
 
@@ -141,6 +141,7 @@ GitStatus getGitStatus(string cwd)
     if (git_repository_head(&head, repo) == 0)
     {
         scope(exit) git_reference_free(head);
+
         if (git_reference_is_branch(head))
         {
             status.branch = git_reference_shorthand(head).fromStringz.idup;
