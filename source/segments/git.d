@@ -11,6 +11,11 @@ import config;
 import themes;
 import git2;
 
+static if (!__traits(compiles, GIT_OID_SHA1_HEXSIZE) && __traits(compiles, GIT_OID_SHA1_SIZE))
+{
+    enum GIT_OID_SHA1_HEXSIZE = GIT_OID_SHA1_SIZE * 2;
+}
+
 SegmentInfo[] gitSegments(ThemeColors theme, string cwd, JSONValue config)
 {
     auto status = getGitStatus(cwd);
