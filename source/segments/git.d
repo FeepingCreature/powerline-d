@@ -211,7 +211,8 @@ void getStatusInfo(git_repository* repo, ref GitStatus status)
     statusopt.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
                       GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
-                      GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+                      GIT_STATUS_OPT_SORT_CASE_SENSITIVELY |
+                      GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
 
     git_status_list* statusList;
     if (git_status_list_new(&statusList, repo, &statusopt) != 0)
@@ -225,19 +226,33 @@ void getStatusInfo(git_repository* repo, ref GitStatus status)
         updateStatusCounts(entry, status);
     }
 
-    status.isClean = (status.staged == 0 && status.notStaged == 0 && status.untracked == 0);
+    status.isClean = (status.staged == 0 && status.notStaged == 0 && status.untracked == 0 && status.conflicted == 0);
 }
 
 void updateStatusCounts(const(git_status_entry)* entry, ref GitStatus status)
 {
-    if (entry.status & GIT_STATUS_WT_NEW)
-        status.untracked++;
-    else if (entry.status & GIT_STATUS_INDEX_NEW)
+    uint s = entry.status;
+
+    if (s & GIT_STATUS_INDEX_NEW || s & GIT_STATUS_INDEX_MODIFIED ||
+        s & GIT_STATUS_INDEX_DELETED || s & GIT_STATUS_INDEX_RENAMED ||
+        s & GIT_STATUS_INDEX_TYPECHANGE)
+    {
         status.staged++;
-    else if (entry.status & GIT_STATUS_INDEX_MODIFIED)
-        status.staged++;
-    else if (entry.status & GIT_STATUS_WT_MODIFIED)
+    }
+
+    if (s & GIT_STATUS_WT_MODIFIED || s & GIT_STATUS_WT_DELETED ||
+        s & GIT_STATUS_WT_TYPECHANGE || s & GIT_STATUS_WT_RENAMED)
+    {
         status.notStaged++;
-    else if (entry.status & GIT_STATUS_CONFLICTED)
+    }
+
+    if (s & GIT_STATUS_WT_NEW)
+    {
+        status.untracked++;
+    }
+
+    if (s & GIT_STATUS_CONFLICTED)
+    {
         status.conflicted++;
+    }
 }
