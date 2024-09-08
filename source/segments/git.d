@@ -123,55 +123,52 @@ GitStatus getGitStatus(string cwd)
         return status;
     scope(exit) git_repository_free(repo);
 
-    if (!getBranchInfo(repo, status))
-        return status;
-
+    getBranchInfo(repo, status);
     getStatusInfo(repo, status);
 
     return status;
 }
 
-bool getBranchInfo(git_repository* repo, ref GitStatus status)
+void getBranchInfo(git_repository* repo, ref GitStatus status)
 {
     git_reference* head;
     if (git_repository_head(&head, repo) != 0)
     {
         status.branch = "Big Bang";
-        return false;
+        return;
     }
     scope(exit) git_reference_free(head);
 
     if (git_reference_is_branch(head))
-        return getBranchInfoForBranch(head, repo, status);
+        getBranchInfoForBranch(head, repo, status);
     else
-        return getBranchInfoForDetached(head, status);
+        getBranchInfoForDetached(head, status);
 }
 
-bool getBranchInfoForBranch(git_reference* head, git_repository* repo, ref GitStatus status)
+void getBranchInfoForBranch(git_reference* head, git_repository* repo, ref GitStatus status)
 {
     status.branch = git_reference_shorthand(head).fromStringz.idup;
 
     git_reference* upstream;
     if (git_branch_upstream(&upstream, head) != 0)
-        return true;
+        return;
     scope(exit) git_reference_free(upstream);
 
     size_t ahead, behind;
     if (git_graph_ahead_behind(&ahead, &behind, repo, git_reference_target(head), git_reference_target(upstream)) != 0)
-        return true;
+        return;
 
     status.ahead = cast(int)ahead;
     status.behind = cast(int)behind;
-    return true;
 }
 
-bool getBranchInfoForDetached(git_reference* head, ref GitStatus status)
+void getBranchInfoForDetached(git_reference* head, ref GitStatus status)
 {
     git_object* target_obj;
     if (git_reference_peel(&target_obj, head, GIT_OBJECT_COMMIT) != 0)
     {
         status.branch = "Big Bang";
-        return false;
+        return;
     }
     scope(exit) git_object_free(target_obj);
 
@@ -183,7 +180,7 @@ bool getBranchInfoForDetached(git_reference* head, ref GitStatus status)
     if (git_describe_commit(&describe_result, target_obj, &describe_options) != 0)
     {
         status.branch = getDetachedOid(target_obj);
-        return true;
+        return;
     }
     scope(exit) git_describe_result_free(describe_result);
 
@@ -194,12 +191,11 @@ bool getBranchInfoForDetached(git_reference* head, ref GitStatus status)
     if (git_describe_format(&buf, describe_result, &format_options) != 0)
     {
         status.branch = getDetachedOid(target_obj);
-        return true;
+        return;
     }
     scope(exit) git_buf_free(&buf);
 
     status.branch = "⚓ " ~ buf.ptr.fromStringz.idup;
-    return true;
 }
 
 string getDetachedOid(git_object* obj)
